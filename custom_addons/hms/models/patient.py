@@ -1,5 +1,6 @@
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
+from odoo.tools import email_normalize
 from datetime import date
 
 
@@ -12,6 +13,14 @@ class HmsPatient(models.Model):
     last_name = fields.Char(required=True)
 
     birth_date = fields.Date()
+
+    email = fields.Char(required=True)
+
+    email_normalized = fields.Char(
+        compute="_compute_email_normalized",
+        store=True,
+        index=True
+    )
 
     history = fields.Html()
 
@@ -64,6 +73,25 @@ class HmsPatient(models.Model):
         'patient_id'
     )
 
+    _sql_constraints = [
+        (
+            'unique_patient_email',
+            'unique(email_normalized)',
+            'Patient email must be unique.'
+        ),
+    ]
+
+    @api.depends('email')
+    def _compute_email_normalized(self):
+        for rec in self:
+            rec.email_normalized = email_normalize(rec.email) if rec.email else False
+
+    @api.constrains('email')
+    def _check_email(self):
+        for rec in self:
+            if rec.email and not email_normalize(rec.email):
+                raise ValidationError("Please enter a valid email address.")
+
     @api.depends('birth_date')
     def _compute_age(self):
         for rec in self:
@@ -90,9 +118,9 @@ class HmsPatient(models.Model):
                     "CR Ratio is required when PCR is checked"
                 )
 
-    @api.onchange('age')
-    def onchange_age(self):
-        if self.age < 30:
+    @api.onchange('birth_date')
+    def onchange_birth_date(self):
+        if self.birth_date and self.age < 30:
             self.pcr = True
 
             return {
