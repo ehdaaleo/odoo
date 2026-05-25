@@ -60,6 +60,7 @@
                             <field name="department_capacity" readonly="1"/>
 
                             <field name="doctor_ids"
+                                   groups="hms.group_hms_manager"
                                    widget="many2many_tags"
                                    readonly="not department_id"/>
                         </group>
